@@ -105,7 +105,7 @@ angular.module('odata-resource-file',[
 .directive('imgControl',['$log',function($log){
     return {
         restrict: 'E',
-        templateUrl: 'js/img/image-control.html',
+        templateUrl: 'js/image-control.html',
         scope: {
             callerResource: '=imageResource',
             image: '=',
@@ -126,6 +126,7 @@ angular.module('odata-resource-file',[
         }
     };
 }]);
+
 angular.module('templates-odata-resource-file', ['js/image-control.html']);
 
 angular.module("js/image-control.html", []).run(["$templateCache", function($templateCache) {

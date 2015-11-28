@@ -100,7 +100,7 @@ angular.module('odata-resource-file',[
 .directive('imgControl',['$log',function($log){
     return {
         restrict: 'E',
-        templateUrl: 'js/img/image-control.html',
+        templateUrl: 'js/image-control.html',
         scope: {
             callerResource: '=imageResource',
             image: '=',

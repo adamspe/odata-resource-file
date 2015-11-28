@@ -1,0 +1,15 @@
+.image-control {
+    .image-display {
+        display: inline-block;
+        position: relative;
+        a.image-remove {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            color: #000;
+        }
+    }
+    .image-upload {
+
+    }
+}

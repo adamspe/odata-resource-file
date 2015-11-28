@@ -1,0 +1,7 @@
+{
+"version": 3,
+"mappings": "AACI,6BAAe;EACX,OAAO,EAAE,YAAY;EACrB,QAAQ,EAAE,QAAQ;;AAClB,4CAAe;EACX,QAAQ,EAAE,QAAQ;EAClB,GAAG,EAAE,GAAG;EACR,KAAK,EAAE,GAAG;EACV,KAAK,EAAE,IAAI",
+"sources": ["../src/css/odata-resource-file.scss"],
+"names": [],
+"file": "odata-resource-file.css"
+}

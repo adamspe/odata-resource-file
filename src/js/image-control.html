@@ -1,0 +1,9 @@
+<div class="image-control">
+    <div class="image-display" ng-if="theImage">
+        <a href class="image-remove" ng-click="remove()"><i class="fa fa-times-circle-o"></i></a>
+        <img-display image="theImage" image-format="{{format}}"></img-display>
+    </div>
+    <div class="image-upload">
+        <img-upload ng-if="!theImage" image-resource="callerResource" on-upload="onUpload(image)"></img-upload>
+    </div>
+</div>

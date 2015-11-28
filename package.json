@@ -1,0 +1,30 @@
+{
+  "name": "odata-resource-file",
+  "version": "0.1.0",
+  "description": "npm module utility built on odata-resource for storing files in mongo.",
+  "main": "index.js",
+  "scripts": {
+    "test": "make test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adamspe/odata-resource-file.git"
+  },
+  "author": "adamspe@gmail.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/adamspe/odata-resource-file/issues"
+  },
+  "homepage": "https://github.com/adamspe/odata-resource-file#readme",
+  "devDependencies": {
+    "express": "^4.13.3",
+    "mongoose": "^4.2.8",
+    "odata-resource": "^0.1.5"
+  },
+  "dependencies": {
+    "debug": "^2.2.0",
+    "lwip": "0.0.8",
+    "mime-types": "^2.1.7",
+    "multer": "^1.1.0"
+  }
+}

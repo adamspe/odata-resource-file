@@ -17,14 +17,19 @@
   },
   "homepage": "https://github.com/adamspe/odata-resource-file#readme",
   "devDependencies": {
+    "body-parser": "^1.14.1",
     "express": "^4.13.3",
+    "lodash": "^3.10.1",
     "mongoose": "^4.2.8",
-    "odata-resource": "^0.1.5"
+    "odata-resource": "^0.1.5",
+    "should": "^7.1.1",
+    "supertest": "^1.1.0"
   },
   "dependencies": {
     "debug": "^2.2.0",
     "lwip": "0.0.8",
     "mime-types": "^2.1.7",
-    "multer": "^1.1.0"
+    "multer": "^1.1.0",
+    "q": "^1.4.1"
   }
 }

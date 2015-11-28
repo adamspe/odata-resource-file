@@ -2,8 +2,8 @@ var Resource = require('odata-resource'),
     multer = require('multer'),
     fs = require('fs'),
     debug = require('debug')('odata-resource-file'),
-    File = require('models/File'),
-    Img = require('models/Img');
+    File = require('./models/File'),
+    Img = require('./models/Img');
 
 function defaultConfig(config,resource){
     config = config||{};

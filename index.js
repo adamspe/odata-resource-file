@@ -114,11 +114,12 @@ module.exports = {
         var img = new Resource({
             rel: config.rel,
             model: config.model,
-            update: false,
-            populate: {path: 'formats.file', select: 'fileName contentType'}
+            update: false
+            //populate: {path: 'formats.file', select: 'fileName contentType'}
         });
         // formats is a list of file resources
         img.getMapper = (function(self,superFunc){
+            var model = self.getModel();
             return function(postMapper) {
                 var mapper = superFunc.apply(self,arguments);
                 return function(o,i,arr) {
@@ -126,7 +127,14 @@ module.exports = {
                     if(i.formats && i.formats.length) {
                         fileMapper = file.getMapper();
                         i.formats = i.formats.map(function(f,j,farr){
-                            f.file = fileMapper(f.file);
+                            var formatFileName = f.format === 'original' ?
+                                i.fileName :
+                                model.fileNameFormat(i.fileName,f.format);
+                            f.file = fileMapper({
+                                            _id: f.file,
+                                            fileName: formatFileName,
+                                            contentType: i.contentType
+                                        });
                             // add convenience links
                             o._links[f.format] = f.file._links.download;
                             return f;

@@ -1,5 +1,7 @@
 var mongoose = require('mongoose'),
     schema = mongoose.Schema({
+        fileName: { type: String, trim: true, required: true},
+        contentType: { type: String, trim: true},
         formats: [{
                     format: {type: String, required: true, default: 'original'},
                     file: {type: mongoose.Schema.Types.ObjectId, required: true, ref: 'File' }
@@ -130,6 +132,21 @@ module.exports = function(config) {
     var ImageModel = mongoose.model('Image',schema);
 
     /**
+     * static utility function for creating a unique file name
+     * for a given format.
+     *
+     * @param {string} original The original file name.
+     * @param {string} format The name of the format.
+     * @returns {string} A new filename with the format inserted.
+     */
+    ImageModel.fileNameFormat = function(original,format){
+        var partsRegex = /^([^\.]+)\.(.*)$/;
+        return original.replace(partsRegex,'$1')+
+                '_'+format+'.'+
+                original.replace(partsRegex,'$2');
+    };
+
+    /**
      * static utility function for creating a new Image.
      *
      * @param  {object}   fileContents {fileName: 'foo.png', contentType: 'image/png', data: Buffer}
@@ -140,7 +157,11 @@ module.exports = function(config) {
             if(err) {
                 return callback(err);
             }
-            (new ImageModel({formats: [{file: f._id}]})).save(function(err,img){
+            (new ImageModel({
+                fileName: f.fileName,
+                contentType: f.contentType,
+                formats: [{file: f._id}]
+            })).save(function(err,img){
                 if(err) {
                     f.remove(/* best effort at cleanup */);
                     return callback(err);

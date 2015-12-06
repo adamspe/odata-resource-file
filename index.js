@@ -115,7 +115,6 @@ module.exports = {
             rel: config.rel,
             model: config.model,
             update: false
-            //populate: {path: 'formats.file', select: 'fileName contentType'}
         });
         // formats is a list of file resources
         img.getMapper = (function(self,superFunc){

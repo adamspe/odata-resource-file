@@ -52,7 +52,7 @@ angular.module('odata-resource-file',[
             }
             $attrs.$observe('fileResource',function(fileResource){
                 var resource = $attrs.fileResource ? $parse($attrs.fileResource)($scope) : undefined;
-                console.log('$attrs.fileResource',resource);
+                $log.debug('$attrs.fileResource',resource);
                 if(typeof(resource) === 'string') {
                     $injector.invoke([resource,listenForChange]);
                 } else {
@@ -97,27 +97,37 @@ angular.module('odata-resource-file',[
         }
     };
 }])
-.directive('imgControl',['$log',function($log){
+.directive('imgControl',['$log','$parse',function($log,$parse){
     return {
         restrict: 'E',
         templateUrl: 'js/image-control.html',
         scope: {
             callerResource: '=imageResource',
-            image: '=',
             format: '@imageFormat'
         },
-        link: function($scope) {
+        link: function($scope,$element,$attrs) {
+            var $model;
             $scope.theImage = undefined;
             $scope.onUpload = function(i) {
                 $log.debug('imgControl.onUpload',i);
                 $scope.theImage = i;
+                if($model) {
+                    $model.assign($scope.$parent,i);
+                }
             };
-            $scope.$watch('image',$scope.onUpload);
             $scope.remove = function() {
                 $scope.theImage.$remove({'id':$scope.theImage._id},function(){
                     $scope.theImage = undefined;
+                    if($model) {
+                        $model.assign($scope.$parent,undefined);
+                    }
                 });
             };
+            $attrs.$observe('image',function(newValue) {
+                $log.debug('$observe.image',newValue);
+                $model = $parse(newValue);
+                $scope.theImage = $model($scope.$parent);
+            });
         }
     };
 }]);

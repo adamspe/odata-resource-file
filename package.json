@@ -37,9 +37,11 @@
   },
   "dependencies": {
     "debug": "^2.2.0",
-    "lwip": "0.0.9",
     "mime-types": "^2.1.7",
     "multer": "^1.1.0",
     "q": "^1.4.1"
+  },
+  "optionalDependencies": {
+      "lwip": "0.0.9"
   }
 }

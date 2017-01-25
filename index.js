@@ -3,8 +3,6 @@ var Resource = require('odata-resource'),
     fs = require('fs'),
     debug = require('debug')('odata-resource-file'),
     File = require('./models/File'),
-    Img = require('./models/Img'),
-    mongoose = require('mongoose'),
     odataResourceFile;
 
 function defaultConfig(config,resource){
@@ -40,7 +38,11 @@ module.exports = odataResourceFile = {
      * Factory function used to construct Img models.
      * @type {function}
      */
-    img: Img,
+    img: function(){
+        // this way Img and its dependencies are not needed unless this
+        // is called.
+        require('./models/Img').apply(this,arguments);
+    },
     /**
      * Constructs and binds a "file" resource to an express app.
      * The input keys for config are:

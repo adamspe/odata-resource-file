@@ -1,4 +1,4 @@
-TESTS = test/*.js
+TESTS = test/file.js
 test:
 	mocha --timeout 5000 $(TESTS)
 

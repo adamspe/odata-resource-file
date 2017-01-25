@@ -81,6 +81,7 @@ module.exports = function(config) {
 
     schema.pre('save',function(next){
         var thisImg = this;
+console.log('preSave.thisImg',thisImg);
         function handleErr(msg,err) {
             cleanupImg(thisImg);
             debug('error: %s',msg,err);
@@ -149,28 +150,33 @@ module.exports = function(config) {
     /**
      * static utility function for creating a new Image.
      *
-     * @param  {object}   fileContents {fileName: 'foo.png', contentType: 'image/png', data: Buffer}
+     * @param  {object}   fileContents {fileName: 'foo.png', contentType: 'image/png', _file: multerData}
      * @param  {Function} callback     function(err,image)
      */
     ImageModel.newImage = function(fileContents,callback) {
-        (new File(fileContents)).save(function(err,f){
+
+        File.storeBuffer(fileContents,function(err,f){
             if(err) {
                 return callback(err);
             }
-            (new ImageModel({
-                fileName: f.fileName,
-                contentType: f.contentType,
-                formats: [{file: f._id}]
-            })).save(function(err,img){
+            f.save(function(err,f){
                 if(err) {
-                    f.remove(/* best effort at cleanup */);
                     return callback(err);
                 }
-                callback(null,img);
+                (new ImageModel({
+                    fileName: f.fileName,
+                    contentType: f.contentType,
+                    formats: [{file: f._id}]
+                })).save(function(err,img){
+                    if(err) {
+                        f.remove(/* best effort at cleanup */);
+                        return callback(err);
+                    }
+                    callback(null,img);
+                });
             });
         });
     };
 
     return ImageModel;
 };
-

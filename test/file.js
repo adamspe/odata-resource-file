@@ -1,19 +1,23 @@
 var should = require('should'),
     util = require('./util/util'),
     fs = require('fs'),
-    _ = require('lodash');
+    _ = require('lodash'),
+    q = require('q');
 
 describe('File',function(){
 
     before(util.before);
 
     after(function(done){
-        util.File.find({}).remove(function(err){
+        // need to re-do to use File.unlink or some such
+        util.File.find({},function(err,files) {
             if(err) {
                 throw err;
             }
-            util.debug('files cleaned up');
-            util.after(done);
+            q.all(files.map(function(f) { return f.remove(); }))
+              .then(function(fs){
+                  done();
+              },done);
         });
     });
 
@@ -42,13 +46,13 @@ describe('File',function(){
                 util.debug('create',res.body);
                 res.body.should.have.property('_id');
                 res.body.should.have.property('_links');
-                res.body.should.have.property('fileName').and.equal('img.js');
+                res.body.should.have.property('filename').and.equal('img.js');
                 res.body.should.have.property('contentType').and.equal('application/javascript');
                 var id = res.body._id,
-                    fileName = res.body.fileName,
+                    filename = res.body.filename,
                     links = res.body._links;
                 links.should.have.property('self').and.equal('/api/file/'+id);
-                links.should.have.property('download').and.equal('/api/file/'+id+'/download/'+fileName);
+                links.should.have.property('download').and.equal('/api/file/'+id+'/download/'+filename);
                 theFile = res.body;
                 done();
             });
@@ -117,13 +121,13 @@ describe('File',function(){
                 util.debug('update',res.body);
                 res.body.should.have.property('_id').and.equal(theFile._id); // no id change
                 res.body.should.have.property('_links');
-                res.body.should.have.property('fileName').and.equal('file.js');
+                res.body.should.have.property('filename').and.equal('file.js');
                 res.body.should.have.property('contentType').and.equal('application/javascript');
                 var id = res.body._id,
-                    fileName = res.body.fileName,
+                    filename = res.body.filename,
                     links = res.body._links;
                 links.should.have.property('self').and.equal('/api/file/'+id);
-                links.should.have.property('download').and.equal('/api/file/'+id+'/download/'+fileName);
+                links.should.have.property('download').and.equal('/api/file/'+id+'/download/'+filename);
                 theFile = res.body;
                 done();
             });

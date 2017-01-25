@@ -63,3 +63,4 @@ var file = odataFile.fileResource({
         model: ImgImpl
     },file,app);
 ```
+

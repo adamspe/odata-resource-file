@@ -1,9 +1,7 @@
 var Resource = require('odata-resource'),
     multer = require('multer'),
-    fs = require('fs'),
     debug = require('debug')('odata-resource-file'),
-    File = require('./models/File'),
-    odataResourceFile;
+    File = require('./models/File');
 
 function defaultConfig(config,resource){
     config = config||{};
@@ -12,23 +10,7 @@ function defaultConfig(config,resource){
     return config;
 }
 
-function imgUpload(self,superFunc) {
-    return function(req,res) {
-        debug('file',req.file);
-        req.body = {
-            fileName: req.file.originalname,
-            contentType: req.file.mimetype,
-            _file: req.file
-        };
-        res.on('finish',function(){
-            debug('resonse sent deleting',req.file.path);
-            fs.unlink(req.file.path);
-        });
-        superFunc.apply(self,arguments);
-    };
-}
-
-module.exports = odataResourceFile = {
+module.exports = {
     /**
      * The File mongoose model.
      * @type {object}
@@ -39,9 +21,8 @@ module.exports = odataResourceFile = {
      * @type {function}
      */
     img: function(){
-        // this way Img and its dependencies are not needed unless this
-        // is called.
-        require('./models/Img').apply(this,arguments);
+        // this way Img and its dependencies are not needed unless this is called.
+        return require('./models/Img').apply(this,arguments);
     },
     /**
      * Constructs and binds a "file" resource to an express app.
@@ -54,17 +35,6 @@ module.exports = odataResourceFile = {
      * @return {object}        The file resource.
      */
     fileResource: function(config,app) {
-        function fileUploader(req,res) {
-            var self = this;
-            File.storeData(req._resourceId,req.file,function(err,f){
-                if(err) {
-                    return Resource.sendError(res,500,'create failure',err);
-                }
-                req._resourceId = f._id;
-                self.findById(req,res);
-            });
-        }
-
         config = defaultConfig(config,'file');
         var file = new Resource({
                 rel: config.rel,
@@ -78,7 +48,8 @@ module.exports = odataResourceFile = {
         // over-ride pretty much everything to work over GridFs rather than a mongoose model
         file.create = file.update = function(req,res) {
             var self = this;
-            File.storeData(req._resourceId,req.file,function(err,f){
+            req.file.cleanup=true;
+            File.storeFile(req._resourceId,req.file,function(err,f){
                 if(err) {
                     return Resource.sendError(res,500,'create failure',err);
                 }
@@ -159,7 +130,7 @@ module.exports = odataResourceFile = {
                                 model.fileNameFormat(i.fileName,f.format);
                             f.file = fileMapper({
                                             _id: f.file,
-                                            fileName: formatFileName,
+                                            filename: formatFileName,
                                             contentType: i.contentType
                                         });
                             // add convenience links
@@ -171,10 +142,12 @@ module.exports = odataResourceFile = {
                 };
             };
         })(img,img.getMapper);
-        // over-ride create to use the convenience wrapper
+
+        // custom create
         img.create = (function(self){
             return function(req,res){
-                self.getModel().newImage(req.body,function(err,img){
+                req.file.cleanup=true;
+                self.getModel().newImage(req.file,function(err,img){
                     if(err) {
                         return Resource.sendError(res,500,'create failure',err);
                     }
@@ -183,9 +156,8 @@ module.exports = odataResourceFile = {
                 });
             };
         })(img);
-        // then over-ride wrap that with fileUpload
+        // create/post takes multi-part form data.
         app.post(img.getRel(),file.$multer_up);
-        img.create = imgUpload(img,img.create);
         img.initRouter(app);
         return img;
     }

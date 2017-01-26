@@ -19,7 +19,12 @@ File.unlink = function(id,callback) {
     File.gfs.remove({_id: id},callback);
 };
 
-File.storeData = function(id,file,callback) {
+/**
+ * @param {undefined||ObjectId} id if undefined will be new file
+ * @param {Object} file  multer input with the exception of an optional 'cleanup' flag which if set will delete the file.
+ * @param {function} callback invoked with the new File object.
+ **/
+File.storeFile = function(id,file,callback) {
     function write(err) {
         if(err) {
             callback(err);
@@ -28,14 +33,51 @@ File.storeData = function(id,file,callback) {
                 _id: (id||mongoose.Types.ObjectId()),
                 filename: file.originalname,
                 mode: 'w',
-                content_type: file.mimetype
+                content_type: file.mimetype,
+                metadata: file.metadata
             }),
             readStream = fs.createReadStream(file.path).pipe(writeStream);
         writeStream.on('error',callback);
         writeStream.on('close',function(f){
             debug('gfs.writeStream.close',f);
+            if(file.cleanup) {
+                fs.unlink(file.path,function(err){
+                    if(err) {
+                        console.error(err);
+                    }
+                    callback(null,f);
+                });
+            } else {
+                callback(null,f);
+            }
+        });
+    }
+    if(id) {
+        // delete and re-write on update
+        File.unlink(id,write);
+    } else {
+        write();
+    }
+};
+
+File.storeData = function(id,file,callback) {
+    function write(err) {
+        if(err) {
+            callback(err);
+        }
+        var writeStream = File.gfs.createWriteStream({
+                _id: (id||mongoose.Types.ObjectId()),
+                filename: file.filename,
+                mode: 'w',
+                content_type: file.mimetype,
+                metadata: file.metadata
+            });
+        writeStream.on('error',callback);
+        writeStream.on('close',function(f){
+            debug('gfs.writeStream.close',f);
             callback(null,f);
         });
+        writeStream.end(file.data);
     }
     if(id) {
         // delete and re-write on update

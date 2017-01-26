@@ -10,6 +10,10 @@ function defaultConfig(config,resource){
     return config;
 }
 
+function fileFromRequest(req) {
+    return req.files && req.files.file && req.files.file.length ? req.files.file[0] : undefined;
+}
+
 module.exports = {
     /**
      * The File mongoose model.
@@ -40,16 +44,26 @@ module.exports = {
                 rel: config.rel,
                 model: File
             });
-        file.$multer_up = multer({dest: config.tmp}).single('file');
+        file.$multer_up = multer({dest: config.tmp}).fields([
+              { name: 'metadata', maxCount: 1 },
+              { name: 'file', maxCount: 1 }
+            ]);
+        //.single('file');
         // POST/PUT are not normal JSON but instead multipart/form-data (file).
         app.post(file.getRel(),file.$multer_up);
         app.put(file.getRel()+'/:id',file.$multer_up);
 
         // over-ride pretty much everything to work over GridFs rather than a mongoose model
-        file.create = file.update = function(req,res) {
-            var self = this;
-            req.file.cleanup=true;
-            File.storeFile(req._resourceId,req.file,function(err,f){
+        file.create = function(req,res) {
+            var self = this,
+                metadata = req.body.metadata,
+                file = fileFromRequest(req)
+            if(metadata && typeof(metadata) === 'string') {
+                metadata = JSON.parse(metadata);
+            }
+            file.cleanup=true;
+            file.metadata = metadata;
+            File.storeFile(req._resourceId,file,function(err,f){
                 if(err) {
                     return Resource.sendError(res,500,'create failure',err);
                 }
@@ -57,6 +71,28 @@ module.exports = {
                 self.findById(req,res);
             });
         };
+        file.update = (function(superFunc){
+            return function(req,res) {
+                var self = this,
+                    metadata = req.body.metadata,
+                    file = fileFromRequest(req);
+                if(file) { // over-write
+                    return self.create.apply(this,arguments);
+                }
+                // o/w only metadata update
+                if(metadata && typeof(metadata) === 'string') {
+                    metadata =  JSON.parse(metadata);
+                }
+                if(!metadata) {
+                    return Resource.sendError(res,400,'bad request',err);
+                }
+                // don't accept any other types of changes, ignore anything else in there.
+                req.body = {
+                    metadata: metadata
+                }
+                superFunc.apply(this,arguments);
+            };
+        })(file.update);
 
         // :filename is really just to make it nicer for browsers so they have an extension
         file.instanceLink('download/:filename',function(req,res){
@@ -146,8 +182,9 @@ module.exports = {
         // custom create
         img.create = (function(self){
             return function(req,res){
-                req.file.cleanup=true;
-                self.getModel().newImage(req.file,function(err,img){
+                var file = fileFromRequest(req);
+                file.cleanup=true;
+                self.getModel().newImage(file,function(err,img){
                     if(err) {
                         return Resource.sendError(res,500,'create failure',err);
                     }

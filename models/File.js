@@ -1,5 +1,12 @@
 var mongoose = require('mongoose'),
-    schema = new mongoose.Schema({}, {strict: false, collection: 'fs.files'}),
+    schema = new mongoose.Schema({
+        md5: {type: String},
+        uploadDate: {type: Date},
+        chunkSize: {type: Number},
+        length: {type: Number},
+        filename: {type: String},
+        metadata: {type: mongoose.Schema.Types.Mixed}
+    }, {strict: false, collection: 'fs.files'}),
     mime = require('mime-types'),
     debug = require('debug')('odata-resource-file'),
     Grid = require('gridfs-stream'),

@@ -94,9 +94,14 @@ File.storeData = function(id,file,callback) {
     }
 };
 
-mongoose.connection.once('open',function() {
+function initGridFs() {
     debug('creating grid fs');
     File.gfs = Grid(mongoose.connection.db,mongoose.mongo);
-});
+}
+if(mongoose.connection.readyState) {
+    initGridFs();
+} else {
+    mongoose.connection.once('open',initGridFs);
+}
 
 module.exports = File;

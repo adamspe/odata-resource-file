@@ -31,17 +31,18 @@
     "lodash": "^3.10.1",
     "matchdep": "^1.0.0",
     "mongoose": "^4.2.8",
-    "odata-resource": "^0.1.5",
+    "odata-resource": "0.2.x",
     "should": "^7.1.1",
     "supertest": "^1.1.0"
   },
   "dependencies": {
     "debug": "^2.2.0",
+    "gridfs-stream": "^1.1.1",
     "mime-types": "^2.1.7",
     "multer": "^1.1.0",
     "q": "^1.4.1"
   },
   "optionalDependencies": {
-      "lwip": "0.0.9"
+    "lwip": "0.0.9"
   }
 }

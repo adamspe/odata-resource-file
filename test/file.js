@@ -1,19 +1,23 @@
 var should = require('should'),
     util = require('./util/util'),
     fs = require('fs'),
-    _ = require('lodash');
+    _ = require('lodash'),
+    q = require('q');
 
 describe('File',function(){
 
     before(util.before);
 
     after(function(done){
-        util.File.find({}).remove(function(err){
+        // need to re-do to use File.unlink or some such
+        util.File.find({},function(err,files) {
             if(err) {
                 throw err;
             }
-            util.debug('files cleaned up');
-            util.after(done);
+            q.all(files.map(function(f) { return f.remove(); }))
+              .then(function(fs){
+                  done();
+              },done);
         });
     });
 
@@ -26,13 +30,22 @@ describe('File',function(){
                     to._links.should.have.property(l).and.equal(theFile._links[l]);
                 });
             } else {
-                to.should.have.property(key).and.equal(theFile[key]);
+                if(typeof(theFile[key]) === 'object') {
+                    to.should.have.property(key).and.eql(theFile[key]);
+                } else {
+                    to.should.have.property(key).and.equal(theFile[key]);
+                }
             }
         });
     }
 
     it('create',function(done){
+        var metadata = {
+            'foo': 'bar',
+            'test': true
+        };
         util.api.post('/api/file')
+            .field('metadata',JSON.stringify(metadata))
             .attach('file','test/img.js')
             .expect(200)
             .end(function(err,res){
@@ -42,13 +55,14 @@ describe('File',function(){
                 util.debug('create',res.body);
                 res.body.should.have.property('_id');
                 res.body.should.have.property('_links');
-                res.body.should.have.property('fileName').and.equal('img.js');
+                res.body.should.have.property('filename').and.equal('img.js');
                 res.body.should.have.property('contentType').and.equal('application/javascript');
+                res.body.should.have.property('metadata').and.eql(metadata)
                 var id = res.body._id,
-                    fileName = res.body.fileName,
+                    filename = res.body.filename,
                     links = res.body._links;
                 links.should.have.property('self').and.equal('/api/file/'+id);
-                links.should.have.property('download').and.equal('/api/file/'+id+'/download/'+fileName);
+                links.should.have.property('download').and.equal('/api/file/'+id+'/download/'+filename);
                 theFile = res.body;
                 done();
             });
@@ -80,6 +94,27 @@ describe('File',function(){
             });
     });
 
+    it('update metadata',function(done) {
+        var metadata = {
+            foo: 'baz',
+            test: false
+        };
+        util.api.put(theFile._links.self)
+            .field('metadata',JSON.stringify(metadata))
+            .expect(200)
+            .end(function(err,res){
+                if(err) {
+                    throw err;
+                }
+                util.debug('update metadata',res.body);
+                // make sure metadata updated but only change
+                theFile.metadata = metadata;
+                compareToTheFile(res.body);
+                theFile = res.body;
+                done();
+            });
+    });
+
     function collectFile(res,next){
         res.setEncoding('binary')
         res.data = '';
@@ -106,7 +141,7 @@ describe('File',function(){
             });
     });
 
-    it('update',function(done){
+    it('overwrite',function(done){
         util.api.put(theFile._links.self)
             .attach('file','test/file.js')
             .expect(200)
@@ -117,19 +152,19 @@ describe('File',function(){
                 util.debug('update',res.body);
                 res.body.should.have.property('_id').and.equal(theFile._id); // no id change
                 res.body.should.have.property('_links');
-                res.body.should.have.property('fileName').and.equal('file.js');
+                res.body.should.have.property('filename').and.equal('file.js');
                 res.body.should.have.property('contentType').and.equal('application/javascript');
                 var id = res.body._id,
-                    fileName = res.body.fileName,
+                    filename = res.body.filename,
                     links = res.body._links;
                 links.should.have.property('self').and.equal('/api/file/'+id);
-                links.should.have.property('download').and.equal('/api/file/'+id+'/download/'+fileName);
+                links.should.have.property('download').and.equal('/api/file/'+id+'/download/'+filename);
                 theFile = res.body;
                 done();
             });
     });
 
-    it('get updated',function(done){
+    it('get overwritten',function(done){
         util.api.get(theFile._links.self)
             .expect(200)
             .end(function(err,res){

@@ -1,9 +1,7 @@
 var Resource = require('odata-resource'),
     multer = require('multer'),
-    fs = require('fs'),
     debug = require('debug')('odata-resource-file'),
-    File = require('./models/File'),
-    Img = require('./models/Img');
+    File = require('./models/File');
 
 function defaultConfig(config,resource){
     config = config||{};
@@ -12,20 +10,8 @@ function defaultConfig(config,resource){
     return config;
 }
 
-function fileUpload(self,superFunc) {
-    return function(req,res) {
-        debug('files',req.file);
-        req.body = {
-            fileName: req.file.originalname,
-            contentType: req.file.mimetype,
-            data: fs.readFileSync(req.file.path)
-        };
-        res.on('finish',function(){
-            debug('resonse sent deleting',req.file.path);
-            fs.unlink(req.file.path);
-        });
-        superFunc.apply(self,arguments);
-    };
+function fileFromRequest(req) {
+    return req.files && req.files.file && req.files.file.length ? req.files.file[0] : undefined;
 }
 
 module.exports = {
@@ -38,7 +24,10 @@ module.exports = {
      * Factory function used to construct Img models.
      * @type {function}
      */
-    img: Img,
+    img: function(){
+        // this way Img and its dependencies are not needed unless this is called.
+        return require('./models/Img').apply(this,arguments);
+    },
     /**
      * Constructs and binds a "file" resource to an express app.
      * The input keys for config are:
@@ -53,16 +42,57 @@ module.exports = {
         config = defaultConfig(config,'file');
         var file = new Resource({
                 rel: config.rel,
-                model: File,
-                $select: '-data'
+                model: File
             });
-        file.$multer_up = multer({dest: config.tmp}).single('file');
+        file.$multer_up = multer({dest: config.tmp}).fields([
+              { name: 'metadata', maxCount: 1 },
+              { name: 'file', maxCount: 1 }
+            ]);
+        //.single('file');
         // POST/PUT are not normal JSON but instead multipart/form-data (file).
         app.post(file.getRel(),file.$multer_up);
         app.put(file.getRel()+'/:id',file.$multer_up);
 
-        file.create = fileUpload(file,file.create);
-        file.update = fileUpload(file,file.update);
+        // over-ride pretty much everything to work over GridFs rather than a mongoose model
+        file.create = function(req,res) {
+            var self = this,
+                metadata = req.body.metadata,
+                file = fileFromRequest(req)
+            if(metadata && typeof(metadata) === 'string') {
+                metadata = JSON.parse(metadata);
+            }
+            file.cleanup=true;
+            file.metadata = metadata;
+            File.storeFile(req._resourceId,file,function(err,f){
+                if(err) {
+                    return Resource.sendError(res,500,'create failure',err);
+                }
+                req._resourceId = f._id;
+                self.findById(req,res);
+            });
+        };
+        file.update = (function(superFunc){
+            return function(req,res) {
+                var self = this,
+                    metadata = req.body.metadata,
+                    file = fileFromRequest(req);
+                if(file) { // over-write
+                    return self.create.apply(this,arguments);
+                }
+                // o/w only metadata update
+                if(metadata && typeof(metadata) === 'string') {
+                    metadata =  JSON.parse(metadata);
+                }
+                if(!metadata) {
+                    return Resource.sendError(res,400,'bad request',err);
+                }
+                // don't accept any other types of changes, ignore anything else in there.
+                req.body = {
+                    metadata: metadata
+                }
+                superFunc.apply(this,arguments);
+            };
+        })(file.update);
 
         // :filename is really just to make it nicer for browsers so they have an extension
         file.instanceLink('download/:filename',function(req,res){
@@ -71,8 +101,13 @@ module.exports = {
                 if(err || !obj) {
                     Resource.sendError(res,404,'not found',err);
                 } else {
-                    res.contentType(obj.contentType);
-                    res.send(obj.data);
+                    debug('download from object',obj);
+                    res.contentType(obj.get('contentType'));
+                    obj.getReadStream()
+                       .on('error',function(err) {
+                            console.error(err);
+                            Resource.sendError(res,500,'Streaming error.',err);
+                        }).pipe(res);
                 }
             });
         });
@@ -83,7 +118,7 @@ module.exports = {
                 return function(o,i,arr) {
                     var o = mapper(o,i,arr);
                     delete o._links['download/:filename'];
-                    o._links['download'] = self.getRel()+'/'+o._id+'/download/'+o.fileName;
+                    o._links['download'] = self.getRel()+'/'+o._id+'/download/'+o.filename;
                     return o;
                 }
             };
@@ -131,7 +166,7 @@ module.exports = {
                                 model.fileNameFormat(i.fileName,f.format);
                             f.file = fileMapper({
                                             _id: f.file,
-                                            fileName: formatFileName,
+                                            filename: formatFileName,
                                             contentType: i.contentType
                                         });
                             // add convenience links
@@ -143,10 +178,13 @@ module.exports = {
                 };
             };
         })(img,img.getMapper);
-        // over-ride create to use the convenience wrapper
+
+        // custom create
         img.create = (function(self){
             return function(req,res){
-                self.getModel().newImage(req.body,function(err,img){
+                var file = fileFromRequest(req);
+                file.cleanup=true;
+                self.getModel().newImage(file,function(err,img){
                     if(err) {
                         return Resource.sendError(res,500,'create failure',err);
                     }
@@ -155,9 +193,8 @@ module.exports = {
                 });
             };
         })(img);
-        // then over-ride wrap that with fileUpload
+        // create/post takes multi-part form data.
         app.post(img.getRel(),file.$multer_up);
-        img.create = fileUpload(img,img.create);
         img.initRouter(app);
         return img;
     }

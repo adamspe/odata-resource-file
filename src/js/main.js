@@ -5,6 +5,19 @@ angular.module('odata-resource-file',[
 .provider('$fileResource',[function(){
     this.$get = ['$log','$resource','$http',function($log,$resource,$http){
         return function(path) {
+            function uploadTxfRequest(data,headers) {
+                $log.debug('$fileResource.transformRequest',data,headers);
+                var metadata = data.metadata,
+                    file = data.file,
+                    fd = new FormData();
+                if(metadata) {
+                    fd.append('metadata',JSON.stringify(metadata));
+                }
+                if(file) {
+                    fd.append('file',file);
+                }
+                return fd;
+            }
             var BaseCls = $resource(path,{},{
                 get: {
                     method: 'GET'
@@ -15,14 +28,14 @@ angular.module('odata-resource-file',[
                 },
                 save: {
                     method: 'POST',
-                    transformRequest: function(data,headers) {
-                        $log.debug('$fileResource.transformRequest',data,headers);
-                        var file = data.file,
-                            fd = new FormData();
-                        headers = { 'Content-Type': undefined };
-                        fd.append('file',file);
-                        return fd;
-                    },
+                    transformRequest: uploadTxfRequest,
+                    headers: {
+                        'Content-Type': undefined
+                    }
+                },
+                update: {
+                    method: 'PUT',
+                    transformRequest: uploadTxfRequest,
                     headers: {
                         'Content-Type': undefined
                     }

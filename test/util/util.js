@@ -43,6 +43,9 @@ var util = {
     debug: require('debug')('odata-resource-file'),
     api: require('supertest').agent(app),
     before: function(done) {
+        if(mongoose.connection.readyState) {
+            return done();
+        }
         mongoose.connect('mongodb://localhost:27017/odata-resource-file-test',function(err){
             if(err) {
                 throw err;
@@ -51,8 +54,7 @@ var util = {
         });
     },
     after: function(done) {
-        mongoose.disconnect();
-        done();
+        mongoose.disconnect(done);
     }
 }
 
